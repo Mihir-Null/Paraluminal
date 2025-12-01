@@ -171,6 +171,8 @@ mono_crash.*
 *.unitypackage
 *.unitypackage.meta
 *.app
+*.blob
+*.sln
 
 # Crashlytics generated file
 crashlytics-build.properties
@@ -196,3 +198,20 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Irrelevant to engine
+/.plastic/
+/.vscode/
+/Junk/
+/OldCode/
+/Resources/
+/ShipBuilding/
+/ShipData/
+/ShipModulesCode/
+/Tests/
+/TextMesh Pro/
+/TutorialInfo/
+/UI/
+InputSystem_Actions.inputactions
+New Font.fontsettings
+/UIElementsSchema/

@@ -1,4 +1,0 @@
-repository "RelSpaceGame2/RelSpaceGame2@2475842414363@cloud"
-  path "/"
-    br "/main"
-    co "/main"
