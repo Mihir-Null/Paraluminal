@@ -4,6 +4,7 @@ A Game Engine that simulates Special Relativistic effects in real time while (tr
 This project implements a custom **special-relativistic game engine** designed for real-time simulation/integration of physics and optics in accelerated frames. It does this by utilizing a variant of Rindler coordinates (and derivation equations) to integrate four vectors and along the spacetime manifold as it evolves from the players perspective. Optics are handled by treating current game state as the local tangent Minkowski plane and using appropriate Lorentz transforms
 
 The core idea is that every physical object evolves inside a **continuously re-oriented Rindler frame** whose +X direction is dynamically controlled by the player’s acceleration input. Objects keep their own Rindler-space positions/velocities and undergo time-dilation, Lorentz-factor–consistent motion, and proper acceleration–based thrust.
+
 ---
 
 ## **Features**
