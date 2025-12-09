@@ -7,5 +7,5 @@ public class GlobalPhysics : ScriptableObject
     public Vector3 playerAcceleration;
 
     [Tooltip("Speed of light in scene units (m/s).")]
-    public float c = 299792458f;
+    public float c;
 }

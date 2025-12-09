@@ -38,7 +38,11 @@ public class RelativisticBody2 : MonoBehaviour
     [SerializeField] private float tau;      // Proper time of the body (s)
     [SerializeField] private Vector3 xGlobal; // (X,Y,Z) in accelerating frame (m)
     [SerializeField] private Vector3 vGlobal; // (vX,vY,vZ) = dX/dT in accelerating frame (m/s)
-    [SerializeField] private Vector3 gamma;
+    [SerializeField] private float velocity;
+    [SerializeField] private float gamma;
+
+    Mesh mesh;
+    Vector3[] restVertices;
 
     // Yoshida 4th-order coefficients (drift c_i, kick d_i)
     static readonly float c1 =  0.5153528374311229364f;
@@ -74,6 +78,15 @@ public class RelativisticBody2 : MonoBehaviour
         if(massShadow != null){shadow = massShadow;}
     }
 
+    void Start()
+    {
+        if (gameObject.TryGetComponent<MeshFilter>(out MeshFilter meshfilter))
+        {
+            mesh = meshfilter.mesh;
+            restVertices = mesh.vertices; // object space
+        }
+    }
+
     void FixedUpdate()
     {
     // calculate current engine timestep
@@ -85,11 +98,7 @@ public class RelativisticBody2 : MonoBehaviour
     xGlobal += rindlerOriginWorld;
     // 3.5 change transform.localScale based on current tangent plane velocity
     float invC2 = 1 / (physicsState.c * physicsState.c);
-    for(int i = 0; i < 3; i++)
-        {
-            gamma[i] = math.sqrt(1.0f - (vGlobal[i] * vGlobal[i] * invC2));
-        }
-    transform.localScale = gamma;
+    gamma = (1/math.sqrt(1.0f - (vGlobal.magnitude)));
 
 
     // 4. Map local position back to world space
@@ -101,10 +110,46 @@ public class RelativisticBody2 : MonoBehaviour
 
     public void LateUpdate()
     {
+        //lorentz deformation
+        if (mesh == null || restVertices == null) return;
+
+        Vector3[] deformed = new Vector3[restVertices.Length];
+
+        // world matrix
+        Matrix4x4 localToWorld = transform.localToWorldMatrix;
+        Matrix4x4 worldToLocal = transform.worldToLocalMatrix;
+
+        Vector3 worldCenter = localToWorld.MultiplyPoint3x4(Vector3.zero);
+        Vector3 u = vGlobal.sqrMagnitude > Mathf.Epsilon
+                    ? vGlobal.normalized
+                    : Vector3.forward;
+        float invGamma = (gamma > 0f) ? 1f / gamma : 1f;
+
+        for (int i = 0; i < restVertices.Length; i++)
+        {
+            Vector3 worldPos = localToWorld.MultiplyPoint3x4(restVertices[i]);
+            Vector3 r = worldPos - worldCenter;
+
+            float proj = Vector3.Dot(r, u);
+            Vector3 r_parallel = proj * u;
+            Vector3 r_perp = r - r_parallel;
+
+            Vector3 r_contracted = r_perp + invGamma * r_parallel;
+            Vector3 worldPosNew = worldCenter + r_contracted;
+
+            deformed[i] = worldToLocal.MultiplyPoint3x4(worldPosNew);
+        }
+
+        mesh.vertices = deformed;
+        mesh.RecalculateBounds();
+        // Only recalc normals if you really need to.
+
         if(shadow != null)
         {
             shadow.history.Push(xGlobal, vGlobal, T, transform.rotation);
         }
+        velocity = vGlobal.magnitude;
+
     }
 
     /// <summary>
@@ -117,8 +162,9 @@ public class RelativisticBody2 : MonoBehaviour
         Vector3 xLocal = Quaternion.Inverse(Local2World) * x;
         Vector3 vLocal =  Quaternion.Inverse(Local2World) * v;
 
-        if(xLocal[0] + physicsState.c <= (2 * Mathf.Epsilon) || vLocal.magnitude - physicsState.c <= (2 * Mathf.Epsilon))
+        if((xLocal[0] + physicsState.c <= (2 * Mathf.Epsilon)) || (Mathf.Abs(vLocal.magnitude - physicsState.c) <= (2 * Mathf.Epsilon)))
         {
+            Debug.Log("rindler horizon hit!");
             return;
         }
 
