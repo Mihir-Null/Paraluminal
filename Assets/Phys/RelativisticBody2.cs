@@ -64,7 +64,12 @@ public class RelativisticBody2 : MonoBehaviour
         T = 0f;
         tau = 0f;
 
-        var massShadow = this.transform.parent.gameObject.GetComponent<MassShadow>();
+        // Prefer a MassShadow on this object, otherwise fall back to the parent.
+        var massShadow = GetComponent<MassShadow>();
+        if (massShadow == null && transform.parent != null)
+        {
+            massShadow = transform.parent.GetComponent<MassShadow>();
+        }
 
         if(massShadow != null){shadow = massShadow;}
     }
@@ -111,6 +116,11 @@ public class RelativisticBody2 : MonoBehaviour
         Quaternion Local2World = Quaternion.FromToRotation(Vector3.right, physicsState.playerAcceleration.normalized);
         Vector3 xLocal = Quaternion.Inverse(Local2World) * x;
         Vector3 vLocal =  Quaternion.Inverse(Local2World) * v;
+
+        if(xLocal[0] + physicsState.c <= (2 * Mathf.Epsilon) || vLocal.magnitude - physicsState.c <= (2 * Mathf.Epsilon))
+        {
+            return;
+        }
 
 
         void Drift(float cCoef)
@@ -224,6 +234,12 @@ public class RelativisticBody2 : MonoBehaviour
     public void SetAcceleration(Vector3 accel)
     {
         this.properAcceleration = accel;
+    }
+
+    // Allow callers (e.g. projectile spawners) to inject an initial velocity in world coordinates.
+    public void SetVelocity(Vector3 velocity)
+    {
+        vGlobal = velocity;
     }
 
     // naive implementation, can significantly speed this up via bracketing 
