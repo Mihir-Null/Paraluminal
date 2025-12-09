@@ -5,26 +5,43 @@ using System.Collections.Generic;
 [RequireComponent(typeof(Camera))]
 public class RelativisticCamera : MonoBehaviour
 {
-    public float c = 299792458f;
+    public GlobalPhysics physicsState;
     public double playerTimeU;          // synced with player’s TUniverse
     public List<MassShadow> shadows;
+    [Tooltip("Which body defines the observer position/time for lightcones")]
+    public RelativisticBody2 observerBody;
+    [Tooltip("Fallback transform for observer position if no body is set")]
+    public Transform observerTransform;
 
 
     void Awake()
     {
+        if (observerTransform == null) observerTransform = transform;
         shadows = new List<MassShadow>(Object.FindObjectsByType<MassShadow>(FindObjectsSortMode.None));
     }
     void LateUpdate()
     {
+        float3 observerPos = observerTransform != null ? (float3)observerTransform.position : float3.zero;
+        if (observerBody != null)
+        {
+            observerPos = observerBody.GetPosition();
+            playerTimeU = observerBody.GetRindlerTime();
+        }
+        else
+        {
+            playerTimeU = Time.time;
+        }
+
         foreach (var t in shadows)
         {
-            if (t == null || t.history == null) continue;
+            if (t == null || t.history == null || t.ghost == null) continue;
 
-            if (!t.history.Pop(float3.zero, playerTimeU, out var g))
+            t.history.c = physicsState.c;
+            if (!t.history.Pop(observerPos, playerTimeU, out var g))
                 continue;
 
             // Apparent position is just emission position in player rest frame
-            float3 pos = g.position;
+            float3 pos = g.position - observerPos;
 
             // Place ghost relative to camera (camera sits at origin in same frame)
             t.ghost.SetParent(transform, false);
@@ -34,9 +51,9 @@ public class RelativisticCamera : MonoBehaviour
             // Doppler: observer at rest
             float3 n = math.normalize(-pos);  // from source to observer (origin)
             float3 v = g.velocity;
-            float beta2 = math.lengthsq(v) / (c*c);
+            float beta2 = math.lengthsq(v) / (physicsState.c*physicsState.c);
             float gamma = 1.0f / math.sqrt(math.max(1e-8f, 1.0f - beta2));
-            float cos   = math.dot(v / c, n);
+            float cos   = math.dot(v / physicsState.c, n);
 
             float D = gamma * (1 - cos);      // ν_obs / ν_emit
             float B = Mathf.Pow(D, 3f);       // relativistic beaming ~ D^3
